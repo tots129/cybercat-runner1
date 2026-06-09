@@ -191,6 +191,84 @@ jogo_html = """
 
         function sortearDica() {
             let novoIndex;
-            // Evita repetir a mesma dica duas vezes seguidas no sorteio
             do {
-                novoIndex = Math
+                novoIndex = Math.floor(Math.random() * listaDeDicas.length);
+            } while (novoIndex === currentTipIndex && listaDeDicas.length > 1);
+            
+            currentTipIndex = novoIndex;
+            tipTextDisplay.innerText = "💡 " + listaDeDicas[currentTipIndex];
+        }
+
+        function showNextTip() {
+            currentTipIndex = (currentTipIndex + 1) % listaDeDicas.length;
+            tipTextDisplay.innerText = "💡 " + listaDeDicas[currentTipIndex];
+        }
+
+        function adjustSpeed(amount) {
+            let nextSpeed = gameSpeed + amount;
+            if (nextSpeed >= 2 && nextSpeed <= 15) {
+                gameSpeed = nextSpeed;
+                if (score === 0) initialSpeed = gameSpeed;
+                speedValDisplay.innerText = gameSpeed.toFixed(1);
+            }
+        }
+
+        function gameLoop() {
+            if (isGameOver) return;
+            updatePlayer(); updateObstacles(); updateScore();
+            requestAnimationFrame(gameLoop);
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'ArrowDown') {
+                e.preventDefault();
+            }
+        }, {passive: false});
+
+        document.addEventListener('keydown', (e) => {
+            if ((e.code === 'Space' || e.code === 'ArrowUp') && !isJumping && !isDucking) {
+                isJumping = true; velocity = jumpForce;
+            }
+            if (e.code === 'ArrowDown' && !isJumping) {
+                isDucking = true; player.classList.add('ducking');
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            if (e.code === 'ArrowDown') { isDucking = false; player.classList.remove('ducking'); }
+        });
+
+        function updatePlayer() {
+            if (isJumping) {
+                position += velocity; velocity -= gravity;
+                if (position <= 20) { position = 20; isJumping = false; velocity = 0; }
+                player.style.bottom = position + 'px';
+            }
+        }
+
+        function updateObstacles() {
+            spawnTimer++;
+            let spawnDelay = Math.random() * 80 + (600 / gameSpeed); 
+            if (spawnTimer > spawnDelay) { createObstacle(); spawnTimer = 0; }
+
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                let obs = obstacles[i];
+                let currentLeft = parseInt(obs.element.style.left);
+                currentLeft -= gameSpeed;
+                obs.element.style.left = currentLeft + 'px';
+
+                if (currentLeft < -40) { obs.element.remove(); obstacles.splice(i, 1); continue; }
+                if (checkCollision(obs)) endGame();
+            }
+        }
+
+        function createObstacle() {
+            const obsElement = document.createElement('div');
+            const isAir = Math.random() < 0.3; 
+            const containerWidth = gameContainer.offsetWidth;
+            if (isAir) {
+                obsElement.classList.add('obstacle-air'); obsElement.style.left = containerWidth + 'px';
+                gameContainer.appendChild(obsElement); obstacles.push({ element: obsElement, type: 'air' });
+            } else {
+                obsElement.classList.add('obstacle-ground'); obsElement.style.left = containerWidth + 'px';
+                gameContainer.appendChild(obsElement); obstacles.push({ element: obsElement,
