@@ -1,5 +1,4 @@
 import streamlit as st
-import random
 
 # Configuração da página do Streamlit
 st.set_page_config(
@@ -12,7 +11,7 @@ st.set_page_config(
 st.title("🐱 CyberCat Runner no Streamlit")
 st.write("Um jogo de corrida infinita estilo Cyberpunk feito para rodar direto no seu app Python!")
 
-# Todo o código HTML, CSS e JavaScript do seu jogo guardado em uma variável
+# Todo o código HTML, CSS e JavaScript do seu jogo + Sistema de Dicas Dinâmico
 jogo_html = """
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -97,6 +96,41 @@ jogo_html = """
             border: none; border-radius: 5px; cursor: pointer; font-weight: bold;
         }
         #instructions { margin-top: 15px; font-size: 13px; color: #888; text-align: center; }
+
+        /* --- ESTILO DA NOVA CAIXA DE DICAS --- */
+        #tips-container {
+            margin-top: 20px;
+            width: 100%;
+            max-width: 700px;
+            background-color: rgba(28, 133, 219, 0.1);
+            border-left: 5px solid #1c85db;
+            padding: 15px;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 15px;
+        }
+        #tip-text {
+            font-size: 14px;
+            color: #d1ecf1;
+            line-height: 1.4;
+        }
+        #next-tip-btn {
+            background-color: #1c85db;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: 0.2s;
+        }
+        #next-tip-btn:hover {
+            background-color: #299bf5;
+        }
     </style>
 </head>
 <body>
@@ -121,6 +155,11 @@ jogo_html = """
         Pressione <strong>Seta para Baixo (↓)</strong> para Agachar.
     </div>
 
+    <div id="tips-container">
+        <div id="tip-text">💡 Carregando dicas...</div>
+        <button id="next-tip-btn" onclick="showNextTip()">Próxima Dica ➔</button>
+    </div>
+
     <script>
         const player = document.getElementById('player');
         const gameContainer = document.getElementById('game-container');
@@ -128,6 +167,7 @@ jogo_html = """
         const finalScoreDisplay = document.getElementById('final-score');
         const gameOverScreen = document.getElementById('game-over');
         const speedValDisplay = document.getElementById('speed-val');
+        const tipTextDisplay = document.getElementById('tip-text');
 
         let gravity = 0.35; let jumpForce = 11.5;     
         let initialSpeed = 4.5; let gameSpeed = initialSpeed; 
@@ -135,121 +175,22 @@ jogo_html = """
         let position = 20; let velocity = 0; let score = 0;
         let isGameOver = false; let obstacles = []; let spawnTimer = 0;
 
-        function adjustSpeed(amount) {
-            let nextSpeed = gameSpeed + amount;
-            if (nextSpeed >= 2 && nextSpeed <= 15) {
-                gameSpeed = nextSpeed;
-                if (score === 0) initialSpeed = gameSpeed;
-                speedValDisplay.innerText = gameSpeed.toFixed(1);
-            }
-        }
+        // BANCO DE DICAS EM JAVASCRIPT
+        const listaDeDicas = [
+            "Dica: Clique dentro da caixa do jogo antes de jogar para que o teclado responda aos comandos!",
+            "Dica: Os lasers rosa vêm pelo alto! Mantenha a Seta para Baixo (↓) pressionada para passar deslizando.",
+            "Dica: Os drones amarelos são terrestres. Use Espaço ou Seta para Cima (↑) para saltar sobre eles.",
+            "Dica: Quer treinar os seus reflexos? Use o botão '+' e comece a partida direto na velocidade 8.0!",
+            "Dica: O jogo acelera automaticamente a cada 600 pontos. Fique esperto!",
+            "Dica: O pulo do CyberCat possui baixa gravidade. Use o tempo no ar para planejar o seu próximo movimento.",
+            "Dica: Se o jogo travar ou não responder, clique em qualquer área preta dentro do retângulo rosa.",
+            "Dica: Sabia que esse jogo foi feito utilizando comunicação híbrida entre HTML e Streamlit? 🐱"
+        ];
 
-        function gameLoop() {
-            if (isGameOver) return;
-            updatePlayer(); updateObstacles(); updateScore();
-            requestAnimationFrame(gameLoop);
-        }
+        let currentTipIndex = 0;
 
-        window.addEventListener('keydown', (e) => {
-            if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'ArrowDown') {
-                e.preventDefault();
-            }
-        }, {passive: false});
-
-        document.addEventListener('keydown', (e) => {
-            if ((e.code === 'Space' || e.code === 'ArrowUp') && !isJumping && !isDucking) {
-                isJumping = true; velocity = jumpForce;
-            }
-            if (e.code === 'ArrowDown' && !isJumping) {
-                isDucking = true; player.classList.add('ducking');
-            }
-        });
-
-        document.addEventListener('keyup', (e) => {
-            if (e.code === 'ArrowDown') { isDucking = false; player.classList.remove('ducking'); }
-        });
-
-        function updatePlayer() {
-            if (isJumping) {
-                position += velocity; velocity -= gravity;
-                if (position <= 20) { position = 20; isJumping = false; velocity = 0; }
-                player.style.bottom = position + 'px';
-            }
-        }
-
-        function updateObstacles() {
-            spawnTimer++;
-            let spawnDelay = Math.random() * 80 + (600 / gameSpeed); 
-            if (spawnTimer > spawnDelay) { createObstacle(); spawnTimer = 0; }
-
-            for (let i = obstacles.length - 1; i >= 0; i--) {
-                let obs = obstacles[i];
-                let currentLeft = parseInt(obs.element.style.left);
-                currentLeft -= gameSpeed;
-                obs.element.style.left = currentLeft + 'px';
-
-                if (currentLeft < -40) { obs.element.remove(); obstacles.splice(i, 1); continue; }
-                if (checkCollision(obs)) endGame();
-            }
-        }
-
-        function createObstacle() {
-            const obsElement = document.createElement('div');
-            const isAir = Math.random() < 0.3; 
-            const containerWidth = gameContainer.offsetWidth;
-            if (isAir) {
-                obsElement.classList.add('obstacle-air'); obsElement.style.left = containerWidth + 'px';
-                gameContainer.appendChild(obsElement); obstacles.push({ element: obsElement, type: 'air' });
-            } else {
-                obsElement.classList.add('obstacle-ground'); obsElement.style.left = containerWidth + 'px';
-                gameContainer.appendChild(obsElement); obstacles.push({ element: obsElement, type: 'ground' });
-            }
-        }
-
-        function checkCollision(obs) {
-            const playerRect = player.getBoundingClientRect();
-            const obsRect = obs.element.getBoundingClientRect();
-            return !(playerRect.right - 12 < obsRect.left || playerRect.left + 12 > obsRect.right || playerRect.bottom - 6 < obsRect.top || playerRect.top + 6 > obsRect.bottom);
-        }
-
-        function updateScore() {
-            score++; scoreDisplay.innerText = score;
-            if (score % 600 === 0) { gameSpeed += 0.5; speedValDisplay.innerText = gameSpeed.toFixed(1); }
-        }
-
-        function endGame() { isGameOver = true; gameOverScreen.style.display = 'flex'; finalScoreDisplay.innerText = score; }
-
-        function resetGame() {
-            obstacles.forEach(obs => obs.element.remove()); obstacles = [];
-            score = 0; gameSpeed = initialSpeed; speedValDisplay.innerText = gameSpeed.toFixed(1);
-            position = 20; velocity = 0; isJumping = false; isDucking = false; isGameOver = false; spawnTimer = 0;
-            player.style.bottom = '20px'; player.classList.remove('ducking');
-            scoreDisplay.innerText = '0'; gameOverScreen.style.display = 'none';
-            gameLoop();
-        }
-        gameLoop();
-    </script>
-</body>
-</html>
-"""
-
-# Renderiza o jogo
-st.components.v1.html(jogo_html, height=430)
-
-# --- SISTEMA DE DICAS ALEATÓRIAS EM PYTHON ---
-lista_de_dicas = [
-    "Dica: Clique dentro da caixa do jogo antes de jogar para que o teclado responda aos comandos!",
-    "Dica: Os lasers rosa vêm pelo alto! Mantenha a Seta para Baixo (↓) pressionada para passar deslizando.",
-    "Dica: Os drones amarelos são terrestres. Use Espaço ou Seta para Cima (↑) para saltar sobre eles.",
-    "Dica: Quer treinar os seus reflexos? Use o botão '+' e comece a partida direto na velocidade 8.0!",
-    "Dica: O jogo acelera automaticamente a cada 600 pontos. Fique esperto!",
-    "Dica: O pulo do CyberCat possui baixa gravidade. Use o tempo no ar para planejar o seu próximo movimento.",
-    "Dica: Se o jogo travar ou não responder, clique em qualquer área preta dentro do retângulo rosa.",
-    "Dica: Sabia que esse jogo foi feito 100% em HTML e Python para evitar problemas de copyright? 🐱"
-]
-
-# Sorteia uma dica da lista usando a biblioteca 'random'
-dica_sorteada = random.choice(lista_de_dicas)
-
-# Exibe a dica na caixinha azul do Streamlit
-st.info(dica_sorteada)
+        function sortearDica() {
+            let novoIndex;
+            // Evita repetir a mesma dica duas vezes seguidas no sorteio
+            do {
+                novoIndex = Math
