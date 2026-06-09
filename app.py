@@ -2,16 +2,16 @@ import streamlit as st
 
 # Configuração da página do Streamlit
 st.set_page_config(
-    page_title="CyberCat Runner - Streamlit", 
+    page_title="CyberCat Runner", 
     page_icon="🐱", 
     layout="centered"
 )
 
 # Título e descrição na interface do Streamlit
-st.title("🐱 CyberCat Runner no Streamlit")
-st.write("Um jogo de corrida infinita estilo Cyberpunk feito para rodar direto no seu app Python!")
+st.title("🐱 CyberCat Runner ")
+st.write("Um jogo de corrida infinita estilo Cyberpunk e o jogo do dinossaurinho do google!")
 
-# Todo o código HTML, CSS e JavaScript do seu jogo + Sistema de Dicas Dinâmico
+# Todo o código HTML, CSS e JavaScript do seu jogo guardado em uma variável
 jogo_html = """
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -96,10 +96,142 @@ jogo_html = """
             border: none; border-radius: 5px; cursor: pointer; font-weight: bold;
         }
         #instructions { margin-top: 15px; font-size: 13px; color: #888; text-align: center; }
+    </style>
+</head>
+<body>
+    <div id="speed-control-panel">
+        <span>Velocidade Atual:</span>
+        <button class="speed-btn" onclick="adjustSpeed(-0.5)">-</button>
+        <span id="speed-val">4.5</span>
+        <button class="speed-btn" onclick="adjustSpeed(0.5)">+</button>
+    </div>
+    <div id="game-container">
+        <div id="score-board">SCORE: <span id="score">0</span></div>
+        <div id="player"></div>
+        <div id="floor"></div>
+        <div id="game-over">
+            <h2>SISTEMA CORROMPIDO</h2>
+            <p style="margin-bottom: 20px;">Sua pontuação final: <span id="final-score">0</span></p>
+            <button class="main-btn" onclick="resetGame()">REINICIAR</button>
+        </div>
+    </div>
+    <div id="instructions">
+        Pressione <strong>Seta para Cima (↑)</strong> ou <strong>Espaço</strong> para Pular.<br>
+        Pressione <strong>Seta para Baixo (↓)</strong> para Agachar.
+    </div>
 
-        /* --- ESTILO DA NOVA CAIXA DE DICAS --- */
-        #tips-container {
-            margin-top: 20px;
-            width: 100%;
-            max-width: 700px;
-            background-color: rgba(28, 133, 219, 0.
+    <script>
+        const player = document.getElementById('player');
+        const gameContainer = document.getElementById('game-container');
+        const scoreDisplay = document.getElementById('score');
+        const finalScoreDisplay = document.getElementById('final-score');
+        const gameOverScreen = document.getElementById('game-over');
+        const speedValDisplay = document.getElementById('speed-val');
+
+        let gravity = 0.35; let jumpForce = 11.5;     
+        let initialSpeed = 4.5; let gameSpeed = initialSpeed; 
+        let isJumping = false; let isDucking = false;
+        let position = 20; let velocity = 0; let score = 0;
+        let isGameOver = false; let obstacles = []; let spawnTimer = 0;
+
+        function adjustSpeed(amount) {
+            let nextSpeed = gameSpeed + amount;
+            if (nextSpeed >= 2 && nextSpeed <= 15) {
+                gameSpeed = nextSpeed;
+                if (score === 0) initialSpeed = gameSpeed;
+                speedValDisplay.innerText = gameSpeed.toFixed(1);
+            }
+        }
+
+        function gameLoop() {
+            if (isGameOver) return;
+            updatePlayer(); updateObstacles(); updateScore();
+            requestAnimationFrame(gameLoop);
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'ArrowDown') {
+                e.preventDefault();
+            }
+        }, {passive: false});
+
+        document.addEventListener('keydown', (e) => {
+            if ((e.code === 'Space' || e.code === 'ArrowUp') && !isJumping && !isDucking) {
+                isJumping = true; velocity = jumpForce;
+            }
+            if (e.code === 'ArrowDown' && !isJumping) {
+                isDucking = true; player.classList.add('ducking');
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            if (e.code === 'ArrowDown') { isDucking = false; player.classList.remove('ducking'); }
+        });
+
+        function updatePlayer() {
+            if (isJumping) {
+                position += velocity; velocity -= gravity;
+                if (position <= 20) { position = 20; isJumping = false; velocity = 0; }
+                player.style.bottom = position + 'px';
+            }
+        }
+
+        function updateObstacles() {
+            spawnTimer++;
+            let spawnDelay = Math.random() * 80 + (600 / gameSpeed); 
+            if (spawnTimer > spawnDelay) { createObstacle(); spawnTimer = 0; }
+
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                let obs = obstacles[i];
+                let currentLeft = parseInt(obs.element.style.left);
+                currentLeft -= gameSpeed;
+                obs.element.style.left = currentLeft + 'px';
+
+                if (currentLeft < -40) { obs.element.remove(); obstacles.splice(i, 1); continue; }
+                if (checkCollision(obs)) endGame();
+            }
+        }
+
+        function createObstacle() {
+            const obsElement = document.createElement('div');
+            const isAir = Math.random() < 0.3; 
+            const containerWidth = gameContainer.offsetWidth;
+            if (isAir) {
+                obsElement.classList.add('obstacle-air'); obsElement.style.left = containerWidth + 'px';
+                gameContainer.appendChild(obsElement); obstacles.push({ element: obsElement, type: 'air' });
+            } else {
+                obsElement.classList.add('obstacle-ground'); obsElement.style.left = containerWidth + 'px';
+                gameContainer.appendChild(obsElement); obstacles.push({ element: obsElement, type: 'ground' });
+            }
+        }
+
+        function checkCollision(obs) {
+            const playerRect = player.getBoundingClientRect();
+            const obsRect = obs.element.getBoundingClientRect();
+            return !(playerRect.right - 12 < obsRect.left || playerRect.left + 12 > obsRect.right || playerRect.bottom - 6 < obsRect.top || playerRect.top + 6 > obsRect.bottom);
+        }
+
+        function updateScore() {
+            score++; scoreDisplay.innerText = score;
+            if (score % 600 === 0) { gameSpeed += 0.5; speedValDisplay.innerText = gameSpeed.toFixed(1); }
+        }
+
+        function endGame() { isGameOver = true; gameOverScreen.style.display = 'flex'; finalScoreDisplay.innerText = score; }
+
+        function resetGame() {
+            obstacles.forEach(obs => obs.element.remove()); obstacles = [];
+            score = 0; gameSpeed = initialSpeed; speedValDisplay.innerText = gameSpeed.toFixed(1);
+            position = 20; velocity = 0; isJumping = false; isDucking = false; isGameOver = false; spawnTimer = 0;
+            player.style.bottom = '20px'; player.classList.remove('ducking');
+            scoreDisplay.innerText = '0'; gameOverScreen.style.display = 'none';
+            gameLoop();
+        }
+        gameLoop();
+    </script>
+</body>
+</html>
+"""
+
+st.components.v1.html(jogo_html, height=430)
+
+st.info("💡 Dica: Clique dentro da caixa do jogo antes de jogar para que o teclado responda aos comandos!")
