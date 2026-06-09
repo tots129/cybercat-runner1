@@ -1,4 +1,5 @@
 import streamlit as st
+import random
 
 # Configuração da página do Streamlit
 st.set_page_config(
@@ -8,8 +9,8 @@ st.set_page_config(
 )
 
 # Título e descrição na interface do Streamlit
-st.title("🐱 CyberCat Runner")
-st.write("Um jogo de corrida infinita estilo Cyberpunk e o jogo do dinosssaurinho!")
+st.title("🐱 CyberCat Runner no Streamlit")
+st.write("Um jogo de corrida infinita estilo Cyberpunk feito para rodar direto no seu app Python!")
 
 # Todo o código HTML, CSS e JavaScript do seu jogo guardado em uma variável
 jogo_html = """
@@ -232,6 +233,25 @@ jogo_html = """
 </html>
 """
 
+# Renderiza o jogo
 st.components.v1.html(jogo_html, height=430)
 
-st.info("💡 Dica: Clique dentro da caixa do jogo antes de jogar para que o teclado responda aos comandos!")
+
+# --- SISTEMA DE DICAS ALEATÓRIAS EM PYTHON ---
+
+Lista_de_dicas = [
+    "Dica: Clique dentro da caixa do jogo antes de jogar para que o teclado responda aos comandos!",
+    "Dica: Os lasers rosa vêm pelo alto! Mantenha a Seta para Baixo (↓) pressionada para passar deslizando.",
+    "Dica: Os drones amarelos são terrestres. Use Espaço ou Seta para Cima (↑) para saltar sobre eles.",
+    "Dica: Quer treinar os seus reflexos? Use o botão '+' e comece a partida direto na velocidade 8.0!",
+    "Dica: O jogo acelera automaticamente a cada 600 pontos. Fique esperto!",
+    "Dica: O pulo do CyberCat possui baixa gravidade. Use o tempo no ar para planejar o seu próximo movimento.",
+    "Dica: Se o jogo travar ou não responder, clique em qualquer área preta dentro do retângulo rosa.",
+    "Dica: Sabia que esse jogo foi feito 100% em HTML e Python para evitar problemas de copyright? 🐱"
+]
+
+# Sorteia uma dica da lista usando a biblioteca 'random'
+dica_sorteada = random.choice(lista_de_dicas)
+
+# Exibe a dica na caixinha azul do Streamlit
+st.info(f"💡 {dicas_sorteada}")
