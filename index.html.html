@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CyberCat Runner - Pulo Flutuante</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #0d0e15;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            color: #fff;
+            overflow: hidden;
+        }
+
+        h1 {
+            color: #00ffcc;
+            text-shadow: 0 0 10px #00ffcc;
+            margin-bottom: 5px;
+        }
+
+        #speed-control-panel {
+            margin-bottom: 15px;
+            background: #10111a;
+            padding: 8px 15px;
+            border-radius: 20px;
+            border: 1px solid #00ffcc;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            z-index: 20;
+        }
+
+        .speed-btn {
+            background-color: #ff0055;
+            color: white;
+            border: none;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .speed-btn:hover {
+            background-color: #ff3377;
+            box-shadow: 0 0 8px #ff0055;
+        }
+
+        #speed-val {
+            font-weight: bold;
+            color: #00ffcc;
+            min-width: 30px;
+            text-align: center;
+        }
+
+        #game-container {
+            position: relative;
+            width: 800px;
+            height: 300px;
+            background: linear-gradient(to bottom, #1a1c29, #10111a);
+            border: 4px solid #ff0055;
+            border-radius: 8px;
+            box-shadow: 0 0 20px #ff0055;
+            overflow: hidden;
+        }
+
+        #floor {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 20px;
+            background-color: #ff0055;
+            box-shadow: 0 -5px 15px #ff0055;
+        }
+
+        #player {
+            position: absolute;
+            bottom: 20px;
+            left: 50px;
+            width: 40px;
+            height: 40px;
+            background-color: #00ffcc;
+            border-radius: 8px;
+            box-shadow: 0 0 15px #00ffcc;
+            transition: height 0.1s;
+        }
+
+        #player::before {
+            content: '';
+            position: absolute;
+            top: -8px;
+            left: 4px;
+            width: 0;
+            height: 0;
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-bottom: 8px solid #00ffcc;
+        }
+        #player::after {
+            content: '';
+            position: absolute;
+            top: -8px;
+            right: 4px;
+            width: 0;
+            height: 0;
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-bottom: 8px solid #00ffcc;
+        }
+
+        #player.ducking {
+            height: 20px;
+        }
+
+        .obstacle-ground {
+            position: absolute;
+            bottom: 20px;
+            width: 30px;
+            height: 40px;
+            background-color: #ffff00;
+            border-radius: 4px;
+            box-shadow: 0 0 15px #ffff00;
+        }
+
+        .obstacle-air {
+            position: absolute;
+            bottom: 65px;
+            width: 40px;
+            height: 15px;
+            background-color: #ff00ff;
+            border-radius: 4px;
+            box-shadow: 0 0 15px #ff00ff;
+        }
+
+        #score-board {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            font-size: 20px;
+            font-weight: bold;
+            color: #00ffcc;
+        }
+
+        #game-over {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.85);
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+
+        #game-over h2 {
+            color: #ff0055;
+            font-size: 36px;
+            margin-bottom: 15px;
+            text-shadow: 0 0 10px #ff0055;
+        }
+
+        #game-over p {
+            font-size: 18px;
+            margin-bottom: 20px;
+        }
+
+        button.main-btn {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #00ffcc;
+            color: #000;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.2s;
+        }
+
+        button.main-btn:hover {
+            background-color: #fff;
+            box-shadow: 0 0 15px #00ffcc;
+        }
+
+        #instructions {
+            margin-top: 15px;
+            font-size: 14px;
+            color: #888;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>CYBERCAT RUNNER</h1>
+
+    <div id="speed-control-panel">
+        <span>Velocidade Atual:</span>
+        <button class="speed-btn" onclick="adjustSpeed(-0.5)">-</button>
+        <span id="speed-val">4.5</span>
+        <button class="speed-btn" onclick="adjustSpeed(0.5)">+</button>
+    </div>
+    
+    <div id="game-container">
+        <div id="score-board">SCORE: <span id="score">0</span></div>
+        <div id="player"></div>
+        <div id="floor"></div>
+        
+        <div id="game-over">
+            <h2>SISTEMA CORROMPIDO</h2>
+            <p>Sua pontuação final: <span id="final-score">0</span></p>
+            <button class="main-btn" onclick="resetGame()">REINICIAR</button>
+        </div>
+    </div>
+
+    <div id="instructions">
+        Pressione <strong>Seta para Cima (↑)</strong> ou <strong>Espaço</strong> para Pular.<br>
+        Pressione <strong>Seta para Baixo (↓)</strong> para Agachar.
+    </div>
+
+    <script>
+        const player = document.getElementById('player');
+        const gameContainer = document.getElementById('game-container');
+        const scoreDisplay = document.getElementById('score');
+        const finalScoreDisplay = document.getElementById('final-score');
+        const gameOverScreen = document.getElementById('game-over');
+        const speedValDisplay = document.getElementById('speed-val');
+
+        // AJUSTE CRUCIAL DE FÍSICA PARA O PULO FLUTUANTE:
+        let gravity = 0.35;       // Diminuído de 0.6 para 0.35 (Queda muito mais lenta e suave)
+        let jumpForce = 11.5;     // Ajustado para manter a altura ideal com a nova gravidade
+        
+        let initialSpeed = 4.5;   
+        let gameSpeed = initialSpeed; 
+
+        let isJumping = false;
+        let isDucking = false;
+        let position = 20; 
+        let velocity = 0;
+        let score = 0;
+        let isGameOver = false;
+        let obstacles = [];
+        let spawnTimer = 0;
+
+        function adjustSpeed(amount) {
+            let nextSpeed = gameSpeed + amount;
+            if (nextSpeed >= 2 && nextSpeed <= 15) {
+                gameSpeed = nextSpeed;
+                if (score === 0) {
+                    initialSpeed = gameSpeed;
+                }
+                speedValDisplay.innerText = gameSpeed.toFixed(1);
+            }
+        }
+
+        function gameLoop() {
+            if (isGameOver) return;
+
+            updatePlayer();
+            updateObstacles();
+            updateScore();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if ((e.code === 'Space' || e.code === 'ArrowUp') && !isJumping && !isDucking) {
+                isJumping = true;
+                velocity = jumpForce;
+            }
+            if (e.code === 'ArrowDown' && !isJumping) {
+                isDucking = true;
+                player.classList.add('ducking');
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            if (e.code === 'ArrowDown') {
+                isDucking = false;
+                player.classList.remove('ducking');
+            }
+        });
+
+        function updatePlayer() {
+            if (isJumping) {
+                position += velocity;
+                velocity -= gravity; // Reduz a velocidade de subida/descida bem mais devagar
+
+                if (position <= 20) {
+                    position = 20;
+                    isJumping = false;
+                    velocity = 0;
+                }
+                player.style.bottom = position + 'px';
+            }
+        }
+
+        function updateObstacles() {
+            spawnTimer++;
+            
+            let spawnDelay = Math.random() * 80 + (600 / gameSpeed); 
+
+            if (spawnTimer > spawnDelay) { 
+                createObstacle();
+                spawnTimer = 0;
+            }
+
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                let obs = obstacles[i];
+                let currentLeft = parseInt(obs.element.style.left);
+
+                currentLeft -= gameSpeed;
+                obs.element.style.left = currentLeft + 'px';
+
+                if (currentLeft < -40) {
+                    obs.element.remove();
+                    obstacles.splice(i, 1);
+                    continue;
+                }
+
+                if (checkCollision(obs)) {
+                    endGame();
+                }
+            }
+        }
+
+        function createObstacle() {
+            const obsElement = document.createElement('div');
+            const isAir = Math.random() < 0.3; 
+            
+            if (isAir) {
+                obsElement.classList.add('obstacle-air');
+                obsElement.style.left = '800px';
+                gameContainer.appendChild(obsElement);
+                obstacles.push({ element: obsElement, type: 'air' });
+            } else {
+                obsElement.classList.add('obstacle-ground');
+                obsElement.style.left = '800px';
+                gameContainer.appendChild(obsElement);
+                obstacles.push({ element: obsElement, type: 'ground' });
+            }
+        }
+
+        function checkCollision(obs) {
+            const playerRect = player.getBoundingClientRect();
+            const obsRect = obs.element.getBoundingClientRect();
+
+            return !(
+                playerRect.right - 12 < obsRect.left ||
+                playerRect.left + 12 > obsRect.right ||
+                playerRect.bottom - 6 < obsRect.top ||
+                playerRect.top + 6 > obsRect.bottom
+            );
+        }
+
+        function updateScore() {
+            score++;
+            scoreDisplay.innerText = score;
+            
+            if (score % 600 === 0) {
+                gameSpeed += 0.5; 
+                speedValDisplay.innerText = gameSpeed.toFixed(1); 
+            }
+        }
+
+        function endGame() {
+            isGameOver = true;
+            gameOverScreen.style.display = 'flex';
+            finalScoreDisplay.innerText = score;
+        }
+
+        function resetGame() {
+            obstacles.forEach(obs => obs.element.remove());
+            obstacles = [];
+            
+            score = 0;
+            gameSpeed = initialSpeed; 
+            speedValDisplay.innerText = gameSpeed.toFixed(1);
+            
+            position = 20;
+            velocity = 0;
+            isJumping = false;
+            isDucking = false;
+            isGameOver = false;
+            spawnTimer = 0;
+            
+            player.style.bottom = '20px';
+            player.classList.remove('ducking');
+            scoreDisplay.innerText = '0';
+            gameOverScreen.style.display = 'none';
+
+            gameLoop();
+        }
+
+        gameLoop();
+    </script>
+</body>
+</html>
