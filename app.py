@@ -8,8 +8,8 @@ st.set_page_config(
 )
 
 # Título e descrição na interface do Streamlit
-st.title("🐱 CyberCat Runner no Streamlit")
-st.write("Um jogo de corrida infinita estilo Cyberpunk feito para rodar direto no seu app Python!")
+st.title("🐱 CyberCat Runner")
+st.write("Um jogo de corrida infinita estilo Cyberpunk e o jogo do dinosssaurinho!")
 
 # Todo o código HTML, CSS e JavaScript do seu jogo guardado em uma variável
 jogo_html = """
