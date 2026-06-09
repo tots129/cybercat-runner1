@@ -1,4 +1,4 @@
-import streamlit as str
+import streamlit as st
 
 # Configuração da página do Streamlit
 st.set_page_config(
@@ -149,7 +149,6 @@ jogo_html = """
             requestAnimationFrame(gameLoop);
         }
 
-        // IMPORTANTE: Previne que a página do Streamlit role para baixo ao apertar Espaço
         window.addEventListener('keydown', (e) => {
             if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'ArrowDown') {
                 e.preventDefault();
@@ -233,8 +232,6 @@ jogo_html = """
 </html>
 """
 
-# Injeta o componente de jogo dentro da página do Streamlit
-# Definimos a altura (height) para caber o container e os controles sem barras de rolagem estranhas
 st.components.v1.html(jogo_html, height=430)
 
 st.info("💡 Dica: Clique dentro da caixa do jogo antes de jogar para que o teclado responda aos comandos!")
