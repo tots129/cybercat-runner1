@@ -1,18 +1,3 @@
-import streamlit as st
-
-# Configuração da página do Streamlit
-st.set_page_config(
-    page_title="CyberCat Runner", 
-    page_icon="🐱", 
-    layout="centered"
-)
-
-# Título e descrição na interface do Streamlit
-st.title("🐱 CyberCat Runner ")
-st.write("Um jogo de corrida infinita estilo Cyberpunk e o jogo do dinossaurinho do google!")
-
-# Todo o código HTML, CSS e JavaScript do seu jogo guardado em uma variável
-jogo_html = """
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -96,6 +81,27 @@ jogo_html = """
             border: none; border-radius: 5px; cursor: pointer; font-weight: bold;
         }
         #instructions { margin-top: 15px; font-size: 13px; color: #888; text-align: center; }
+
+        #tips-container {
+            margin-top: 20px;
+            width: 100%;
+            max-width: 700px;
+            background-color: rgba(28, 133, 219, 0.1);
+            border-left: 5px solid #1c85db;
+            padding: 15px;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 15px;
+        }
+        #tip-text { font-size: 14px; color: #d1ecf1; line-height: 1.4; }
+        #next-tip-btn {
+            background-color: #1c85db; color: white; border: none; padding: 6px 12px;
+            border-radius: 4px; font-size: 12px; font-weight: bold; cursor: pointer;
+            white-space: nowrap; transition: 0.2s;
+        }
+        #next-tip-btn:hover { background-color: #299bf5; }
     </style>
 </head>
 <body>
@@ -117,7 +123,13 @@ jogo_html = """
     </div>
     <div id="instructions">
         Pressione <strong>Seta para Cima (↑)</strong> ou <strong>Espaço</strong> para Pular.<br>
-        Pressione <strong>Seta para Baixo (↓)</strong> para Agachar.
+        Pressione <strong>Seta para Baixo (↓)</strong> para Agachar.<br>
+        Pressione <strong>P</strong> para Pausar / Despausar.
+    </div>
+
+    <div id="tips-container">
+        <div id="tip-text">💡 Carregando dicas...</div>
+        <button id="next-tip-btn" onclick="showNextTip()">Próxima Dica ➔</button>
     </div>
 
     <script>
@@ -127,14 +139,44 @@ jogo_html = """
         const finalScoreDisplay = document.getElementById('final-score');
         const gameOverScreen = document.getElementById('game-over');
         const speedValDisplay = document.getElementById('speed-val');
+        const tipTextDisplay = document.getElementById('tip-text');
 
         let gravity = 0.35; let jumpForce = 11.5;     
         let initialSpeed = 4.5; let gameSpeed = initialSpeed; 
         let isJumping = false; let isDucking = false;
+        let isPaused = false;
         let position = 20; let velocity = 0; let score = 0;
         let isGameOver = false; let obstacles = []; let spawnTimer = 0;
 
+        const listaDeDicas = [
+            "Dica: Clique dentro da caixa do jogo antes de jogar para que o teclado responda aos comandos!",
+            "Dica: Pressione a tecla P a qualquer momento para pausar o jogo e respirar!",
+            "Dica: Os lasers rosa vêm pelo alto! Mantenha a Seta para Baixo (↓) pressionada para passar deslizando.",
+            "Dica: Os drones amarelos são terrestres. Use Espaço ou Seta para Cima (↑) para saltar sobre eles.",
+            "Dica: Quer treinar os seus reflexos? Use o botão '+' e comece a partida direto na velocidade 8.0!",
+            "Dica: O jogo acelera automaticamente a cada 600 pontos. Fique esperto!",
+            "Dica: O pulo do CyberCat possui baixa gravidade. Use o tempo no ar para planejar o seu próximo movimento.",
+            "Dica: Se o jogo travar ou não responder, clique em qualquer área preta dentro do retângulo rosa."
+        ];
+
+        let currentTipIndex = 0;
+
+        function sortearDica() {
+            let novoIndex;
+            do {
+                novoIndex = Math.floor(Math.random() * listaDeDicas.length);
+            } while (novoIndex === currentTipIndex && listaDeDicas.length > 1);
+            currentTipIndex = novoIndex;
+            tipTextDisplay.innerText = "💡 " + listaDeDicas[currentTipIndex];
+        }
+
+        function showNextTip() {
+            currentTipIndex = (currentTipIndex + 1) % listaDeDicas.length;
+            tipTextDisplay.innerText = "💡 " + listaDeDicas[currentTipIndex];
+        }
+
         function adjustSpeed(amount) {
+            if (isPaused) return;
             let nextSpeed = gameSpeed + amount;
             if (nextSpeed >= 2 && nextSpeed <= 15) {
                 gameSpeed = nextSpeed;
@@ -144,18 +186,31 @@ jogo_html = """
         }
 
         function gameLoop() {
-            if (isGameOver) return;
+            if (isGameOver || isPaused) return;
             updatePlayer(); updateObstacles(); updateScore();
             requestAnimationFrame(gameLoop);
         }
 
         window.addEventListener('keydown', (e) => {
-            if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'ArrowDown') {
+            if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'ArrowDown' || e.code === 'KeyP') {
                 e.preventDefault();
             }
         }, {passive: false});
 
         document.addEventListener('keydown', (e) => {
+            if (e.code === 'KeyP' && !isGameOver) {
+                isPaused = !isPaused;
+                if (isPaused) {
+                    tipTextDisplay.innerText = "⏸️ JOGO PAUSADO - Pressione P para voltar";
+                } else {
+                    sortearDica();
+                    gameLoop();
+                }
+                return;
+            }
+
+            if (isPaused) return;
+
             if ((e.code === 'Space' || e.code === 'ArrowUp') && !isJumping && !isDucking) {
                 isJumping = true; velocity = jumpForce;
             }
@@ -216,22 +271,25 @@ jogo_html = """
             if (score % 600 === 0) { gameSpeed += 0.5; speedValDisplay.innerText = gameSpeed.toFixed(1); }
         }
 
-        function endGame() { isGameOver = true; gameOverScreen.style.display = 'flex'; finalScoreDisplay.innerText = score; }
+        function endGame() { 
+            isGameOver = true; 
+            gameOverScreen.style.display = 'flex'; 
+            finalScoreDisplay.innerText = score; 
+            sortearDica();
+        }
 
         function resetGame() {
             obstacles.forEach(obs => obs.element.remove()); obstacles = [];
             score = 0; gameSpeed = initialSpeed; speedValDisplay.innerText = gameSpeed.toFixed(1);
-            position = 20; velocity = 0; isJumping = false; isDucking = false; isGameOver = false; spawnTimer = 0;
+            position = 20; velocity = 0; isJumping = false; isDucking = false; isGameOver = false; isPaused = false; spawnTimer = 0;
             player.style.bottom = '20px'; player.classList.remove('ducking');
             scoreDisplay.innerText = '0'; gameOverScreen.style.display = 'none';
+            sortearDica();
             gameLoop();
         }
+        
+        sortearDica();
         gameLoop();
     </script>
 </body>
 </html>
-"""
-
-st.components.v1.html(jogo_html, height=430)
-
-st.info("💡 Dica: Clique dentro da caixa do jogo antes de jogar para que o teclado responda aos comandos!")
